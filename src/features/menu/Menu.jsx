@@ -6,9 +6,9 @@ function Menu() {
   const menu = useLoaderData();
   // console.log(menu);
 
-  return <h1>Menu
+  return <ul className="divide-y divide-stone-200 px-2">Menu
     {menu.map((pizza)=><MenuItem pizza={pizza} key={pizza.id}/>)}
-  </h1>;
+  </ul>;
 }
 
 export async function loader() {
