@@ -23,6 +23,7 @@ const cartSlice = createSlice({
       const item = state.cart.find((item) => action.payload === item.pizzaId);
       item.quantity--;
       item.totalPrice = item.quantity * item.unitPrice;
+      if (item.quantity === 0) cartSlice.caseReducers.deleteItems(state,action);
     },
     clearCart(state) {
       state.cart = [];
@@ -33,6 +34,8 @@ const cartSlice = createSlice({
 export const { addItem, deleteItems, addQuantity, deleteQuantity, clearCart } = cartSlice.actions;
 
 export default cartSlice.reducer;
+
+export const getCart = (state) => state.cart.cart;
 
 export const totalCartPizzaQuantity = (state)=> state.cart.cart.reduce((sum,items)=>sum + items.quantity,0);
 

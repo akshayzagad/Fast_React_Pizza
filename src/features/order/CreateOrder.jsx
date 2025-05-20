@@ -1,70 +1,79 @@
-import { useState } from "react";
-import { Form, redirect, useActionData, useNavigation } from "react-router-dom";
-import { createOrder } from "../../services/apiRestaurant";
-import Button from "../../ui/Button";
-import { useSelector } from "react-redux";
+import { useState } from 'react';
+import { Form, redirect, useActionData, useNavigation } from 'react-router-dom';
+import { createOrder } from '../../services/apiRestaurant';
+import Button from '../../ui/Button';
+import { useSelector } from 'react-redux';
+import { clearCart, getCart } from '../cart/cartSlice';
+import EmptyCart from '../cart/EmptyCart';
+import store from '../../store';
+import { formatCurrency } from '../../utils/helpers';
 
 // https://uibakery.io/regex-library/phone-number
 const isValidPhone = (str) =>
   /^\+?\d{1,4}?[-.\s]?\(?\d{1,3}?\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9}$/.test(
-    str
+    str,
   );
 
-const fakeCart = [
-  {
-    pizzaId: 12,
-    name: "Mediterranean",
-    quantity: 2,
-    unitPrice: 16,
-    totalPrice: 32,
-  },
-  {
-    pizzaId: 6,
-    name: "Vegetale",
-    quantity: 1,
-    unitPrice: 13,
-    totalPrice: 13,
-  },
-  {
-    pizzaId: 11,
-    name: "Spinach and Mushroom",
-    quantity: 1,
-    unitPrice: 15,
-    totalPrice: 15,
-  },
-];
-
 function CreateOrder() {
+  const [withPriority, setWithPriority] = useState(false);
+
   const navigation = useNavigation();
-  const isSubmitting = navigation.state === "submitting";
+
+  const isSubmitting = navigation.state === 'submitting';
+
   const formErrors = useActionData();
-  const userName = useSelector((state)=> state.user.username);
-  // const [withPriority, setWithPriority] = useState(false);
-  const cart = fakeCart;
+
+  const userName = useSelector((state) => state.user.username);
+
+  const cart = useSelector(getCart);
+
+  const totalCartPrice = useSelector((state) =>
+    state.cart.cart.reduce((sum, item) => sum + item.totalPrice, 0),
+  );
+
+  const priorityPrice = withPriority ? totalCartPrice * 0.2 : 0;
+  const totalPrice = totalCartPrice + priorityPrice;
+
+  if (!cart.length) return <EmptyCart />;
 
   return (
     <div className="px-4 py-6">
-      <h2 className="text-xl mb-8 font-semibold">Ready to order? Let's go!</h2>
+      <h2 className="mb-8 text-xl font-semibold">Ready to order? Let's go!</h2>
 
       <Form method="post">
-        <div className="mb-5 flex gap-2 flex-col sm:flex-row sm:items-center">
+        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center">
           <label className="sm:basis-40">First Name</label>
-          <input className="input flex-grow" type="text" name="customer" defaultValue={userName} required />
+          <input
+            className="input flex-grow"
+            type="text"
+            name="customer"
+            defaultValue={userName}
+            required
+          />
         </div>
 
-        <div className="mb-5 flex gap-2 flex-col sm:flex-row sm:items-center">
+        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center">
           <label className="sm:basis-40">Phone number</label>
           <div className="grow">
             <input className="input w-full" type="tel" name="phone" required />
-          
-          {formErrors ?.phone && <p className="text-sm mt-2 text-red-700 bg-red-100 p-2 rounded-md">{formErrors.phone}</p>}
+
+            {formErrors?.phone && (
+              <p className="mt-2 rounded-md bg-red-100 p-2 text-sm text-red-700">
+                {formErrors.phone}
+              </p>
+            )}
           </div>
         </div>
 
-        <div className="mb-5 flex gap-2 flex-col sm:flex-row sm:items-center">
+        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center">
           <label className="sm:basis-40">Address</label>
           <div className="grow">
-            <input type="text" className="input w-full" name="address" required />
+            <input
+              type="text"
+              className="input w-full"
+              name="address"
+              required
+            />
           </div>
         </div>
 
@@ -74,16 +83,20 @@ function CreateOrder() {
             name="priority"
             id="priority"
             className="h-6 w-6 accent-yellow-400 focus:outline-none focus:ring focus:ring-yellow-400 focus:ring-offset-2"
-            // value={withPriority}
-            // onChange={(e) => setWithPriority(e.target.checked)}
+            value={withPriority}
+            onChange={(e) => setWithPriority(e.target.checked)}
           />
-          <label htmlFor="priority" className="font-medium">Want to yo give your order priority?</label>
+          <label htmlFor="priority" className="font-medium">
+            Want to yo give your order priority?
+          </label>
         </div>
 
         <div>
           <input type="hidden" name="cart" value={JSON.stringify(cart)} />
-          <Button type="primary" disabled={isSubmitting} >
-            {isSubmitting ? "Order is Placing" : "Order now"}
+          <Button type="primary" disabled={isSubmitting}>
+            {isSubmitting
+              ? 'Order is Placing'
+              : `Order now and pay ${formatCurrency(totalPrice)}`}
           </Button>
         </div>
       </Form>
@@ -93,26 +106,32 @@ function CreateOrder() {
 
 export async function action({ request }) {
   const formData = await request.formData();
+
   const data = Object.fromEntries(formData);
+
   console.log(data);
 
   const order = {
     ...data,
     cart: JSON.parse(data.cart),
-    priority: data.priority === "on",
+    priority: data.priority === 'true',
   };
 
   const errors = {};
   if (!isValidPhone(order.phone))
     errors.phone =
-      "Please give us your correct phone number. We might need it to contact you.";
+      'Please give us your correct phone number. We might need it to contact you.';
 
   if (Object.keys(errors).length > 0) return errors;
 
-  // const newOrder = await createOrder(order);
+  const newOrder = await createOrder(order);
+  /**
+   * Dispatches the clearCart action to the Redux store, which resets the cart array to empty (removes all items from the cart) after an order is placed. This ensures the cart is cleared for the next order.
+   *Here in action method we did not use cartSlice beacause of redux thumb rules so that why we directrly call store and dispatch its cartslice function
+   */
+  store.dispatch(clearCart());
 
-  // return redirect(`/order/${newOrder.id}`);
-  return null
+  return redirect(`/order/${newOrder.id}`);
 }
 
 export default CreateOrder;
@@ -134,7 +153,7 @@ export default CreateOrder;
     a FormData object.
     This object allows access to the submitted form fields and their values.
 
-    *Object.fromEntries(formData):
+ * Object.fromEntries(formData):
 
     Converts the FormData object into a plain JavaScript object (data), 
     where each key corresponds to a form field name, and each value corresponds to the field's value. 
