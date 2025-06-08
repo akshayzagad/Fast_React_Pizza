@@ -1,18 +1,17 @@
 // Test ID: IIDSAT
 
-import { useLoaderData } from "react-router-dom";
-import { getOrder } from "../../services/apiRestaurant";
+import { useLoaderData } from 'react-router-dom';
+import { getOrder } from '../../services/apiRestaurant';
 import {
   calcMinutesLeft,
   formatCurrency,
   formatDate,
-} from "../../utils/helpers";
-import OrderItem from "./OrderItem";
+} from '../../utils/helpers';
+import OrderItem from './OrderItem';
 
 function Order() {
-
   const order = useLoaderData();
-  
+
   /**
    * useLoaderData Hook:
 
@@ -51,7 +50,7 @@ function Order() {
        these are only for the restaurant staff
   */
 
-   const {
+  const {
     id,
     status,
     priority,
@@ -113,7 +112,7 @@ function Order() {
   );
 }
 
-export async function loader({params}) {
+export async function loader({ params }) {
   const order = await getOrder(params.orderId);
   return order;
 }
