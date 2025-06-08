@@ -1,6 +1,6 @@
 // Test ID: IIDSAT
 
-import { useLoaderData } from 'react-router-dom';
+import { useFetcher, useLoaderData } from 'react-router-dom';
 import { getOrder } from '../../services/apiRestaurant';
 import {
   calcMinutesLeft,
@@ -8,47 +8,32 @@ import {
   formatDate,
 } from '../../utils/helpers';
 import OrderItem from './OrderItem';
+import { useEffect } from 'react';
 
 function Order() {
+  
   const order = useLoaderData();
 
+  const fetcher = useFetcher();
+
+/** The useFetcher hook is a special React Router hook that lets 
+ * you interact with routes and loaders/actions without causing 
+ * a full navigation or page change. 
+ * */
+
+  useEffect(
+    function(){
+      if (!fetcher.data && !fetcher.state === 'idle') 
+      fetcher.load('/menu');
+    
+    },[fetcher]
+  )
+
   /**
-   * useLoaderData Hook:
-
-    This is a React Router hook that allows a component to access the data returned by the 
-    loader function associated with the current route.
-    It ensures that the component has access to the data fetched by the loader before rendering.
-
-   * order Variable:
-    The order variable stores the data returned by the loader function.
-    In this case, the loader function fetches an order object
-    (e.g., details about a specific pizza order) using the getOrder function.
-
-   * How It Works:
-
-    When a user navigates to a route (e.g., /order/:orderId), React Router calls the loader 
-    function for that route.
-    The loader fetches the required data (e.g., an order object) and returns it.
-    The useLoaderData hook retrieves this data and makes it available to the component.
-
-   * Purpose:
-
-    This approach ensures that the Order component has all the necessary data (order) before it 
-    renders.
-    It avoids the need for additional API calls or state management within the component itself.
-
-   * Example Flow:
-    A user navigates to /order/123.
-    React Router calls the loader function, which fetches the order details for orderId = 123 and 
-    returns the data.
-    The useLoaderData hook retrieves the returned data and assigns it to the order variable.
-    The Order component uses the order variable to display the order details.
-   
+   * It gives you an object with methods and state for making background data requests 
+   * (like loading or submitting forms) to your routes.
+     You can use it to fetch data or submit forms without navigating away from the current page.
    */
-
-  /**  Everyone can search for all orders, so for privacy reasons we're gonna gonna exclude names or address,
-       these are only for the restaurant staff
-  */
 
   const {
     id,
@@ -91,7 +76,9 @@ function Order() {
 
       <ul className="dive-stone-200 divide-y border-b border-t">
         {cart.map((item) => (
-          <OrderItem item={item} key={item.pizzaId} />
+          <OrderItem item={item} key={item.pizzaId} isLoadingIngredients={fetcher.state === 'loading'}
+          ingredients={fetcher?.data?.find((el)=>el.id === item.pizzaId)?.ingredients ?? []}
+          />
         ))}
       </ul>
 
@@ -118,3 +105,41 @@ export async function loader({ params }) {
 }
 
 export default Order;
+
+  /**
+   * useLoaderData Hook:
+
+    This is a React Router hook that allows a component to access the data returned by the 
+    loader function associated with the current route.
+    It ensures that the component has access to the data fetched by the loader before rendering.
+
+   * order Variable:
+    The order variable stores the data returned by the loader function.
+    In this case, the loader function fetches an order object
+    (e.g., details about a specific pizza order) using the getOrder function.
+
+   * How It Works:
+
+    When a user navigates to a route (e.g., /order/:orderId), React Router calls the loader 
+    function for that route.
+    The loader fetches the required data (e.g., an order object) and returns it.
+    The useLoaderData hook retrieves this data and makes it available to the component.
+
+   * Purpose:
+
+    This approach ensures that the Order component has all the necessary data (order) before it 
+    renders.
+    It avoids the need for additional API calls or state management within the component itself.
+
+   * Example Flow:
+    A user navigates to /order/123.
+    React Router calls the loader function, which fetches the order details for orderId = 123 and 
+    returns the data.
+    The useLoaderData hook retrieves the returned data and assigns it to the order variable.
+    The Order component uses the order variable to display the order details.
+   
+   */
+
+  /**  Everyone can search for all orders, so for privacy reasons we're gonna gonna exclude names or address,
+       these are only for the restaurant staff
+  */
